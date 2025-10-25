@@ -1,8 +1,11 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import Button from '../ui/Button';
+import React, { useState, useEffect } from "react";
+import { ethers } from "ethers";
+import Button from "../ui/Button";
+import Image from "next/image";
+import logo from "../../assets/logo.svg";
+import Link from "next/link";
 
 // Extend Window interface to include ethereum
 declare global {
@@ -22,7 +25,11 @@ const HeaderSection: React.FC = () => {
       window.ethereum.on("accountsChanged", handleEthAccountsChanged);
     }
     return () => {
-      if (window.ethereum) window.ethereum.removeListener("accountsChanged", handleEthAccountsChanged);
+      if (window.ethereum)
+        window.ethereum.removeListener(
+          "accountsChanged",
+          handleEthAccountsChanged
+        );
     };
   }, []);
 
@@ -59,36 +66,33 @@ const HeaderSection: React.FC = () => {
     setEthWalletAddress(null);
   };
 
-  const formatAddress = (address: string) => `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const formatAddress = (address: string) =>
+    `${address.slice(0, 6)}...${address.slice(-4)}`;
 
   return (
     <>
       {/* Row 1: 3 columns - 100px height */}
-      <div className="grid grid-cols-3 gap-0 border-b border-white/10 rounded-2xl">
-        <div className="bg-white/5 p-6 border-r border-white/10 flex items-center justify-center">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#9ed9d4' }}>
-              <span className="font-bold text-sm" style={{ color: 'black' }}>S</span>
-            </div>
-            <span className="text-white text-lg font-medium">StableSwap</span>
-          </div>
+      <div className="grid grid-cols-3 gap-0 rounded-2xl h-[100px]">
+        <div className="bg-[#000000] flex items-center justify-start border-r border-white/10">
+          <Link href="/" className="h-[60px] w-max ml-[60px]">
+            <Image src={logo} alt="logo" width={100} height={100} className="h-full w-auto" />
+          </Link>
         </div>
-        <div className="bg-white/5 p-6 flex items-center justify-center">
-        </div>
-        <div className="bg-white/5 p-6 border-l border-white/10 flex items-center justify-center">
+        <div className="bg-[#000000] flex items-center justify-center border-r border-white/10"></div>
+        <div className="bg-[#000000] flex items-center justify-center">
           {ethWalletAddress ? (
             <div className="flex flex-col items-center gap-2 w-4/5">
-              <Button onClick={disconnectEthWallet} className="w-full py-4">
+              <Button onClick={disconnectEthWallet} className="w-full">
                 {formatAddress(ethWalletAddress)}
               </Button>
-              <span className="text-xs text-white/60">Click to disconnect</span>
+              <span className="text-xs">Click to disconnect</span>
             </div>
           ) : (
             <div className="w-4/5">
-              <Button 
+              <Button
                 onClick={connectEthWallet}
                 disabled={isConnectingEth}
-                className="w-full py-4"
+                className="w-full"
               >
                 {isConnectingEth ? "Connecting..." : "Connect Wallet"}
               </Button>

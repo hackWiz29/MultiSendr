@@ -7,8 +7,8 @@ import FeaturesSection from './herosection/FeaturesSection';
 
 const HeroSection: React.FC = () => {
   return (
-    <section className="w-screen h-screen bg-black p-1">
-      <div className="h-full grid grid-rows-[100px_1fr_130px] gap-1.5">
+    <section className="w-screen h-screen bg-[#2E2E2E] p-1">
+      <div className="h-full grid grid-rows-[100px_1fr_130px] gap-1">
         <HeaderSection />
         <MainContentSection />
         <FeaturesSection />

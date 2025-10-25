@@ -2,6 +2,9 @@
 
 import type React from "react"
 import { useState } from "react"
+import Link from "next/link"
+import Button from "./ui/Button"
+import { IoArrowForward } from "react-icons/io5"
 
 const SwapSection: React.FC = () => {
   const [swapFromAmount, setSwapFromAmount] = useState("")
@@ -14,7 +17,7 @@ const SwapSection: React.FC = () => {
   return (
     <section className="bg-card border border-border rounded-xl p-8 shadow-lg hover:border-primary/30 transition-all">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-foreground mb-2">Cross-Chain Stablecoin Swap</h2>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Cross-Chain Token Swap</h2>
         <p className="text-sm text-muted-foreground">Swap USDC across multiple blockchain networks</p>
       </div>
 
@@ -43,12 +46,12 @@ const SwapSection: React.FC = () => {
           </select>
         </div>
 
-        <button
-          onClick={executeSwap}
-          className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-lg py-3 font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all active:scale-95"
-        >
-          Execute Swap
-        </button>
+        <Link href="/swap" className="w-full">
+          <Button className="w-full flex items-center justify-center space-x-2">
+            <span>Go to Batch Swap</span>
+            <IoArrowForward className="w-4 h-4" />
+          </Button>
+        </Link>
       </div>
     </section>
   )

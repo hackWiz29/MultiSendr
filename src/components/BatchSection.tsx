@@ -2,9 +2,14 @@
 
 import type React from "react"
 import { useState } from "react"
+import { useAvailWallet } from "../hooks/useAvailWallet"
+import { availService, BatchTransfer } from "../services/availService"
 
 const BatchSection: React.FC = () => {
+  const { isConnected, address, connectWallet } = useAvailWallet()
   const [batchTransfers, setBatchTransfers] = useState([{ recipient: "", amount: "" }])
+  const [isExecuting, setIsExecuting] = useState(false)
+  const [txHash, setTxHash] = useState<string | null>(null)
 
   const addBatchTransfer = () => {
     setBatchTransfers([...batchTransfers, { recipient: "", amount: "" }])
@@ -15,8 +20,43 @@ const BatchSection: React.FC = () => {
   }
 
   const executeBatch = async () => {
-    console.log("Batch transfers:", batchTransfers)
-    alert("Batch executed (simulation)")
+    if (!isConnected) {
+      await connectWallet()
+      return
+    }
+
+    setIsExecuting(true)
+    setTxHash(null)
+
+    try {
+      // Filter valid transfers
+      const validTransfers = batchTransfers.filter(
+        transfer => transfer.recipient && transfer.amount && parseFloat(transfer.amount) > 0
+      )
+
+      if (validTransfers.length === 0) {
+        throw new Error('No valid transfers to execute')
+      }
+
+      // Convert to BatchTransfer format
+      const batchTransferData: BatchTransfer[] = validTransfers.map(transfer => ({
+        recipient: transfer.recipient,
+        amount: transfer.amount
+      }))
+
+      console.log("Executing batch transfers with Avail SDK:", batchTransferData)
+      
+      // Execute batch transfers using Avail SDK
+      const hash = await availService.executeBatchTransfers(batchTransferData)
+      setTxHash(hash)
+      
+      console.log("Batch transfers executed successfully:", hash)
+    } catch (error) {
+      console.error("Batch transfer failed:", error)
+      alert(`Batch transfer failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsExecuting(false)
+    }
   }
 
   return (
@@ -68,6 +108,27 @@ const BatchSection: React.FC = () => {
           </div>
         ))}
 
+        {/* Wallet Status */}
+        {address && (
+          <div className="bg-[#1A1A1A] border border-white/10 rounded-lg p-4 mb-4">
+            <h4 className="font-medium text-white/95 mb-2">Wallet Connected</h4>
+            <div className="text-sm text-white/70">
+              <div>Address: {address.slice(0, 6)}...{address.slice(-4)}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Transaction Status */}
+        {txHash && (
+          <div className="bg-[#723680]/10 border border-[#723680]/20 rounded-lg p-4 mb-4">
+            <h4 className="font-medium text-[#723680] mb-2">Transaction Submitted</h4>
+            <div className="text-sm text-white/80">
+              <div>Hash: {txHash.slice(0, 10)}...{txHash.slice(-8)}</div>
+              <div className="text-[#723680] mt-1">✓ Transaction submitted to Avail network</div>
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-3 pt-4">
           <button
             onClick={addBatchTransfer}
@@ -77,9 +138,15 @@ const BatchSection: React.FC = () => {
           </button>
           <button
             onClick={executeBatch}
-            className="flex-1 bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-lg py-2 font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all active:scale-95"
+            disabled={!isConnected || isExecuting}
+            className={`flex-1 bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-lg py-2 font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all active:scale-95 ${!isConnected || isExecuting ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            Execute Batch
+            {isExecuting 
+              ? "Executing Batch..." 
+              : !isConnected 
+              ? "Connect Wallet" 
+              : "Execute Batch"
+            }
           </button>
         </div>
       </div>

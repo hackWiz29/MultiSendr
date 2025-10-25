@@ -20,7 +20,7 @@ const ConnectWallet: React.FC = () => {
             Avail Batch & Cross-Chain Swaps
           </h1>
           <p className="text-lg text-muted-foreground mb-8">
-            Seamlessly swap stablecoins across chains and execute batch transactions on Avail
+            Seamlessly swap tokens across chains and execute batch transactions on Avail
           </p>
         </div>
       </div>

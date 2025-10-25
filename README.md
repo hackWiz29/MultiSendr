@@ -1,4 +1,6 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MultiSendr
+
+MultiSendr is a [Next.js](https://nextjs.org) project for batch token swapping and multi-send functionality.
 
 ## Getting Started
 
