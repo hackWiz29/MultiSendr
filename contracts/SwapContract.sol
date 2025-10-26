@@ -2,9 +2,9 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title StableCoinSwapContract
@@ -68,7 +68,7 @@ contract StableCoinSwapContract is ReentrancyGuard, Ownable, Pausable {
     // Supported stablecoins
     address[] public supportedTokenList;
     
-    constructor() {
+    constructor() Ownable(msg.sender) {
         // Set default swap fee to 0.3% (30 basis points)
         swapFees[address(0)] = 30;
     }

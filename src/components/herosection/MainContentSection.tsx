@@ -7,7 +7,21 @@ import Link from "next/link";
 
 const MainContentSection: React.FC = () => {
   return (
-    <div className="grid grid-cols-2 gap-1">
+    <div className="grid gap-1" style={{ gridTemplateColumns: '25% 1fr 25%' }}>
+      <div className="bg-[#000000] p-8 flex flex-col justify-between items-start h-full">
+        <div className="flex justify-start w-full">
+          <svg viewBox="0 0 120 120" fill="none" className="w-[clamp(4rem,1.975rem+8.642vw,7.5rem)] lg:w-[clamp(4rem,0rem+6.25vw,7.5rem)] stroke-[1rem] text-white">
+            <path d="M60 120V82.0388L82.5962 58.8235H120M60 0L60 37.9612L37.4038 61.1765L0 61.1765" stroke="currentcolor" fill="none"></path>
+          </svg>
+        </div>
+        <div className="text-left relative w-full">
+          <div className="absolute top-0 left-0 w-3 h-3 border-l-2 border-t-2 border-white rounded-tl-md"></div>
+          <div className="absolute bottom-0 right-0 w-3 h-3 border-r-2 border-b-2 border-white rounded-br-md"></div>
+          <p className="text-white text-sm text-center leading-relaxed pl-6 pr-6 pt-2 pb-2 w-full">
+            Built on Avail's cutting-edge SDK.
+          </p>
+        </div>
+      </div>
       <div
         className="bg-[#000000] p-6 flex items-center justify-center relative isolation-isolate"
         style={{
@@ -61,19 +75,17 @@ const MainContentSection: React.FC = () => {
           </Link>
         </div>
       </div>
-      <div className="bg-[#000000]">
-        <div className="h-full grid grid-cols-2 gap-0">
-          {/* First column with 2 rows */}
-          <div className="grid grid-rows-2 gap-0 border-r border-white/10">
-            <div className="flex items-center justify-center border-b border-white/10 p-3"></div>
-            <div className="flex items-center justify-center p-3"></div>
-          </div>
-          {/* Second column with 3 rows */}
-          <div className="grid grid-rows-3 gap-0">
-            <div className="flex items-center justify-center border-b border-white/10 p-3"></div>
-            <div className="flex items-center justify-center border-b border-white/10 p-3"></div>
-            <div className="flex items-center justify-center p-3"></div>
-          </div>
+      <div className="bg-[#000000] p-8 flex flex-col justify-between items-end">
+        <div className="text-left">
+          <p className="text-white text-sm text-right leading-relaxed">
+            MultiSendr is a revolutionary stablecoin swapping platform that allows you to exchange multiple cryptocurrencies simultaneously in a single transaction. Built on the Avail blockchain, it offers lightning-fast swaps with minimal fees, making it the most efficient way to manage your digital assets.
+          </p>
+        </div>
+        <div className="mt-4">
+          <svg viewBox="0 0 120 120" fill="none" className="w-[clamp(4rem,1.975rem+8.642vw,7.5rem)] lg:w-[clamp(4rem,0rem+6.25vw,7.5rem)] stroke-[1rem] text-white">
+            <path id="Vector 82" d="M61.25 55.3594L6.25001 114M6.25 6L43.1843 45.6563" fill="none" stroke="currentcolor"></path>
+            <path id="Vector 83" d="M61.25 6L109.25 60L61.25 114" fill="none" stroke="currentcolor"></path>
+          </svg>
         </div>
       </div>
     </div>
