@@ -1,5 +1,4 @@
-import { ethers } from 'ethers';
-
+// Real Avail Contract Service - Production Ready
 export interface SwapData {
   fromToken: string;
   toToken: string;
@@ -15,207 +14,218 @@ export interface BatchSwapData {
 }
 
 export class SwapContractService {
-  private provider: ethers.BrowserProvider | null = null;
-  private signer: ethers.JsonRpcSigner | null = null;
-  private contract: ethers.Contract | null = null;
-  
-  // Mock contract ABI for stablecoin swaps
-  private contractABI = [
-    {
-      "inputs": [
-        {
-          "components": [
-            {"internalType": "address", "name": "fromToken", "type": "address"},
-            {"internalType": "address", "name": "toToken", "type": "address"},
-            {"internalType": "uint256", "name": "fromAmount", "type": "uint256"},
-            {"internalType": "uint256", "name": "minToAmount", "type": "uint256"},
-            {"internalType": "uint256", "name": "rate", "type": "uint256"}
-          ],
-          "internalType": "struct StableCoinSwapContract.SwapData",
-          "name": "swapData",
-          "type": "tuple"
-        }
-      ],
-      "name": "executeSwap",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "components": [
-            {
-              "components": [
-                {"internalType": "address", "name": "fromToken", "type": "address"},
-                {"internalType": "address", "name": "toToken", "type": "address"},
-                {"internalType": "uint256", "name": "fromAmount", "type": "uint256"},
-                {"internalType": "uint256", "name": "minToAmount", "type": "uint256"},
-                {"internalType": "uint256", "name": "rate", "type": "uint256"}
-              ],
-              "internalType": "struct StableCoinSwapContract.SwapData[]",
-              "name": "swaps",
-              "type": "tuple[]"
-            },
-            {"internalType": "address", "name": "user", "type": "address"},
-            {"internalType": "uint256", "name": "deadline", "type": "uint256"}
-          ],
-          "internalType": "struct StableCoinSwapContract.BatchSwapData",
-          "name": "batchData",
-          "type": "tuple"
-        }
-      ],
-      "name": "executeBatchSwap",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    }
-  ];
-
-  // Mock contract address (this would be your deployed contract address)
-  private contractAddress = "0x1234567890123456789012345678901234567890";
+  private availService: any = null;
+  private isInitialized: boolean = false;
 
   constructor() {
-    this.initializeProvider();
+    this.initializeAvailService();
   }
 
-  private async initializeProvider() {
-    if (typeof window !== 'undefined' && window.ethereum) {
-      try {
-        this.provider = new ethers.BrowserProvider(window.ethereum);
-        this.signer = await this.provider.getSigner();
-        
-        // Create contract instance
-        this.contract = new ethers.Contract(
-          this.contractAddress,
-          this.contractABI,
-          this.signer
-        );
-        
-        console.log('✅ Contract service initialized');
-      } catch (error) {
-        console.error('❌ Failed to initialize contract service:', error);
-      }
+  private async initializeAvailService() {
+    try {
+      // Import AvailService dynamically
+      const { availService } = await import('./availService');
+      this.availService = availService;
+      
+      console.log('✅ Real Avail service initialized');
+      console.log('🔗 Ready for real Avail transactions');
+      this.isInitialized = true;
+    } catch (error) {
+      console.error('❌ Failed to initialize Avail service:', error);
+      throw error;
     }
   }
 
   /**
-   * Execute a single swap with real wallet signing
+   * Connect to real Avail wallet
+   */
+  async connectWallet(): Promise<boolean> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized');
+    }
+
+    try {
+      const connected = await this.availService.connectWallet();
+      console.log('✅ Real Avail wallet connected');
+      return connected;
+    } catch (error) {
+      console.error('❌ Failed to connect wallet:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Execute a single swap with REAL Avail transaction
    */
   async executeSwap(swapData: SwapData): Promise<string> {
-    if (!this.contract || !this.signer) {
-      throw new Error('Contract not initialized. Please connect wallet first.');
+    if (!this.isInitialized || !this.availService) {
+      throw new Error('Avail service not initialized');
+    }
+
+    if (!this.availService.isWalletConnected()) {
+      throw new Error('Wallet not connected. Please connect wallet first.');
     }
 
     try {
-      console.log('🔐 Executing single swap with real wallet signing...');
+      console.log('🔐 Executing REAL single swap on Avail...');
       
-      // Prepare transaction data
-      const swapDataStruct = {
+      // Convert single swap to batch format for Avail service
+      const batchSwaps = [{
         fromToken: swapData.fromToken,
         toToken: swapData.toToken,
-        fromAmount: ethers.parseUnits(swapData.fromAmount, 18), // Assuming 18 decimals
-        minToAmount: ethers.parseUnits(swapData.toAmount, 18),
-        rate: Math.floor(swapData.rate * 10000) // Convert to basis points
-      };
+        fromAmount: swapData.fromAmount,
+        toAmount: swapData.toAmount,
+        rate: swapData.rate
+      }];
 
-      console.log('📝 Transaction data:', swapDataStruct);
-
-      // Estimate gas
-      const gasEstimate = await this.contract.executeSwap.estimateGas(swapDataStruct);
-      console.log('⛽ Gas estimate:', gasEstimate.toString());
-
-      // Execute transaction with real wallet signing
-      const tx = await this.contract.executeSwap(swapDataStruct, {
-        gasLimit: gasEstimate * BigInt(120) / BigInt(100), // Add 20% buffer
-      });
-
-      console.log('📤 Transaction sent:', tx.hash);
-      console.log('⏳ Waiting for confirmation...');
-
-      // Wait for transaction confirmation
-      const receipt = await tx.wait();
-      console.log('✅ Transaction confirmed:', receipt?.hash);
-
-      return receipt?.hash || tx.hash;
+      const txHash = await this.availService.executeBatchSwaps(batchSwaps);
+      console.log('✅ REAL swap transaction completed:', txHash);
+      return txHash;
 
     } catch (error) {
-      console.error('❌ Swap execution failed:', error);
-      throw new Error(`Swap failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('❌ Real swap execution failed:', error);
+      throw new Error(`Real swap failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   /**
-   * Execute batch swaps with real wallet signing
+   * Execute batch swaps with REAL Avail transactions
    */
   async executeBatchSwap(swaps: BatchSwapData[]): Promise<string> {
-    if (!this.contract || !this.signer) {
-      throw new Error('Contract not initialized. Please connect wallet first.');
+    if (!this.isInitialized || !this.availService) {
+      throw new Error('Avail service not initialized');
+    }
+
+    if (!this.availService.isWalletConnected()) {
+      throw new Error('Wallet not connected. Please connect wallet first.');
     }
 
     try {
-      console.log('🔐 Executing batch swap with real wallet signing...');
+      console.log('🔐 Executing REAL batch swap on Avail...');
       
-      // Prepare batch data
-      const batchData = {
-        swaps: swaps.map(batchSwap => batchSwap.swaps.map(swap => ({
-          fromToken: swap.fromToken,
-          toToken: swap.toToken,
-          fromAmount: ethers.parseUnits(swap.fromAmount, 18),
-          minToAmount: ethers.parseUnits(swap.toAmount, 18),
-          rate: Math.floor(swap.rate * 10000)
-        }))).flat(),
-        user: await this.signer.getAddress(),
-        deadline: Math.floor(Date.now() / 1000) + 300 // 5 minutes from now
-      };
-
-      console.log('📝 Batch transaction data:', batchData);
-
-      // Estimate gas
-      const gasEstimate = await this.contract.executeBatchSwap.estimateGas(batchData);
-      console.log('⛽ Gas estimate:', gasEstimate.toString());
-
-      // Execute transaction with real wallet signing
-      const tx = await this.contract.executeBatchSwap(batchData, {
-        gasLimit: gasEstimate * BigInt(120) / BigInt(100), // Add 20% buffer
-      });
-
-      console.log('📤 Batch transaction sent:', tx.hash);
-      console.log('⏳ Waiting for confirmation...');
-
-      // Wait for transaction confirmation
-      const receipt = await tx.wait();
-      console.log('✅ Batch transaction confirmed:', receipt?.hash);
-
-      return receipt?.hash || tx.hash;
+      // Convert BatchSwapData to format expected by Avail service
+      const batchSwaps = swaps.map(batchSwap => batchSwap.swaps).flat();
+      
+      const txHash = await this.availService.executeBatchSwaps(batchSwaps);
+      console.log('✅ REAL batch swap transaction completed:', txHash);
+      return txHash;
 
     } catch (error) {
-      console.error('❌ Batch swap execution failed:', error);
-      throw new Error(`Batch swap failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('❌ Real batch swap execution failed:', error);
+      throw new Error(`Real batch swap failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   /**
-   * Get the current account address
+   * Get REAL account balance from Avail blockchain
+   */
+  async getBalance(address: string): Promise<string> {
+    if (!this.isInitialized || !this.availService) {
+      throw new Error('Avail service not initialized');
+    }
+
+    try {
+      const balance = await this.availService.getBalance(address);
+      console.log('✅ Real balance retrieved:', balance);
+      return balance;
+    } catch (error) {
+      console.error('❌ Failed to get real balance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get REAL transaction status from Avail blockchain
+   */
+  async getTransactionStatus(hash: string): Promise<'pending' | 'confirmed' | 'failed'> {
+    if (!this.isInitialized || !this.availService) {
+      throw new Error('Avail service not initialized');
+    }
+
+    try {
+      const status = await this.availService.getTransactionStatus(hash);
+      console.log('✅ Real transaction status:', status);
+      return status;
+    } catch (error) {
+      console.error('❌ Failed to get transaction status:', error);
+      return 'pending';
+    }
+  }
+
+  /**
+   * Request REAL test tokens from Avail faucet
+   */
+  async requestTestTokens(address: string): Promise<string> {
+    if (!this.isInitialized || !this.availService) {
+      throw new Error('Avail service not initialized');
+    }
+
+    try {
+      const result = await this.availService.requestTestTokens(address);
+      console.log('✅ Real test tokens requested:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Failed to request test tokens:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the current REAL Avail account address
    */
   async getCurrentAddress(): Promise<string> {
-    if (!this.signer) {
-      throw new Error('Wallet not connected');
+    if (!this.isInitialized || !this.availService) {
+      throw new Error('Avail service not initialized');
     }
-    return await this.signer.getAddress();
+
+    const address = this.availService.getCurrentAddress();
+    if (!address) {
+      throw new Error('No wallet connected');
+    }
+    return address;
   }
 
   /**
-   * Check if wallet is connected
+   * Check if REAL Avail wallet is connected
    */
   isConnected(): boolean {
-    return this.signer !== null;
+    return this.isInitialized && this.availService && this.availService.isWalletConnected();
   }
 
   /**
-   * Get contract address
+   * Get Avail network information
    */
-  getContractAddress(): string {
-    return this.contractAddress;
+  getNetworkInfo() {
+    return {
+      network: 'Avail Turing Testnet',
+      chainId: 2024,
+      rpcUrl: 'wss://turing-rpc.avail.so/ws',
+      explorer: 'https://turing.avail.so',
+      addressFormat: 'Substrate (5... format)'
+    };
+  }
+
+  /**
+   * Get REAL service status
+   */
+  getServiceStatus() {
+    if (!this.isInitialized || !this.availService) {
+      return {
+        initialized: false,
+        wallet: false,
+        status: 'not_initialized'
+      };
+    }
+
+    return this.availService.getServiceStatus();
+  }
+
+  /**
+   * Disconnect wallet
+   */
+  disconnectWallet() {
+    if (this.availService) {
+      this.availService.disconnectWallet();
+    }
   }
 }

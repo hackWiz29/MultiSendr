@@ -1,0 +1,46 @@
+{
+  "contracts": {
+    "StableCoinSwapContract": {
+      "address": "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
+      "network": "mumbai",
+      "chainId": 80001,
+      "deployedAt": "2024-12-19T00:00:00.000Z",
+      "status": "active",
+      "note": "Mumbai testnet contract address - update this when you deploy your own contract"
+    }
+  },
+  "networks": {
+    "mumbai": {
+      "name": "Polygon Mumbai Testnet",
+      "chainId": 80001,
+      "rpcUrl": "https://rpc-mumbai.maticvigil.com",
+      "explorer": "https://mumbai.polygonscan.com"
+    },
+    "hardhat": {
+      "name": "Hardhat Local Network",
+      "chainId": 1337,
+      "rpcUrl": "http://127.0.0.1:8545",
+      "explorer": "N/A"
+    }
+  },
+  "tokens": {
+    "USDC": {
+      "address": "0x2058A9D7613eEE744279e3856E0C5DEd6e0c2b0c",
+      "symbol": "USDC",
+      "decimals": 6,
+      "network": "mumbai"
+    },
+    "USDT": {
+      "address": "0xBD21A10F619BE90d6066c941b04e9c3a4b9c4a0",
+      "symbol": "USDT",
+      "decimals": 6,
+      "network": "mumbai"
+    },
+    "DAI": {
+      "address": "0x001B3B4d0F3714Ca98ba10F6042DaEbF0B1B7b6F",
+      "symbol": "DAI",
+      "decimals": 18,
+      "network": "mumbai"
+    }
+  }
+}

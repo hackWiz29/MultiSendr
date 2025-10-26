@@ -1,0 +1,27 @@
+[package]
+name = "stablecoin_swap"
+version = "0.1.0"
+authors = ["Your Name <your.email@example.com>"]
+edition = "2021"
+
+[dependencies]
+ink = { version = "4.0.0", default-features = false }
+
+[dev-dependencies]
+ink_e2e = "4.0.0"
+
+[features]
+default = ["std"]
+std = [
+    "ink/std",
+]
+ink-as-dependency = []
+
+[lib]
+name = "stablecoin_swap"
+path = "lib.rs"
+crate-type = ["cdylib"]
+
+[[bin]]
+name = "stablecoin_swap"
+path = "bin/stablecoin_swap.rs"

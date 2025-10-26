@@ -86,12 +86,8 @@ export const useAvailWallet = () => {
       // Get the injector for signing transactions
       const injector = await web3FromAddress(address)
 
-      // Set wallet client in Avail service
-      await availService.setWalletClient({
-        address,
-        injector,
-        signer: injector.signer
-      })
+      // Connect wallet using the new real Avail service
+      await availService.connectWallet()
 
       // Get balance
       const balance = await availService.getBalance(address)
@@ -162,13 +158,8 @@ export const useAvailWallet = () => {
             const address = account.address
 
             if (address.startsWith('5')) {
-              const injector = await web3FromAddress(address)
-              
-              await availService.setWalletClient({
-                address,
-                injector,
-                signer: injector.signer
-              })
+              // Connect wallet using the new real Avail service
+              await availService.connectWallet()
               
               const balance = await availService.getBalance(address)
 

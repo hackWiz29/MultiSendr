@@ -24,10 +24,12 @@ const BatchSwapInterface: React.FC = () => {
   const { addTransaction, updateTransaction } = useTransactions()
   
   // Initialize contract service for real wallet signing
+  const [contractService, setContractService] = React.useState<SwapContractService | null>(null)
+  
   React.useEffect(() => {
     if (isConnected) {
-      const contractService = new SwapContractService()
-      availService.setSwapContractService(contractService)
+      const service = new SwapContractService()
+      setContractService(service)
       console.log('✅ Contract service initialized for real wallet signing')
     }
   }, [isConnected])
@@ -126,18 +128,49 @@ const BatchSwapInterface: React.FC = () => {
         description: `Batch swap ${validPairs.length} pairs`
       })
       
-      // Execute batch swap using Avail SDK
-      const hash = await availService.executeBatchSwaps(batchSwapData)
-      setTxHash(hash)
-      setShowSuccess(true)
+      // Execute batch swap using contract service
+      if (!contractService) {
+        throw new Error('Contract service not initialized')
+      }
       
-      // Update transaction with hash and mark as confirmed
-      updateTransaction(transactionId, {
-        hash,
-        status: 'confirmed'
-      })
+      // Convert to BatchSwapData format expected by contract service
+      const contractBatchData = [{
+        swaps: batchSwapData,
+        user: address || '',
+        deadline: Math.floor(Date.now() / 1000) + 300 // 5 minutes from now
+      }]
       
-      console.log("Batch swap executed successfully:", hash)
+      try {
+        const hash = await contractService.executeBatchSwap(contractBatchData)
+        
+        // Check if transaction was actually submitted (not cancelled)
+        if (hash && !hash.includes('simulation') && !hash.includes('pending')) {
+          setTxHash(hash)
+          setShowSuccess(true)
+          
+          // Update transaction with hash and mark as confirmed
+          updateTransaction(transactionId, {
+            hash,
+            status: 'confirmed'
+          })
+          
+          console.log("Batch swap executed successfully:", hash)
+        } else {
+          // Transaction was cancelled or failed
+          throw new Error('Transaction was cancelled by user')
+        }
+      } catch (txError) {
+        // Handle transaction cancellation or failure
+        console.log('Transaction cancelled or failed:', txError)
+        
+        // Update transaction status to cancelled/failed
+        updateTransaction(transactionId, {
+          status: 'failed',
+          error: 'Transaction was cancelled by user'
+        })
+        
+        throw txError
+      }
     } catch (error) {
       console.error("Batch swap failed:", error)
       
