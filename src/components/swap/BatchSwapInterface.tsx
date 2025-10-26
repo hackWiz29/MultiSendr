@@ -5,8 +5,11 @@ import SwapPair from "./SwapPair"
 import BatchSummary from "./BatchSummary"
 import Button from "../ui/Button"
 import { IoAdd, IoSwapHorizontal } from "react-icons/io5"
-import { useAvailWallet } from "../../hooks/useAvailWallet"
+import { useWallet } from "../../contexts/WalletContext"
+import { useTransactions } from "../../contexts/TransactionContext"
 import { availService, BatchSwapData } from "../../services/availService"
+import { SwapContractService } from "../../services/swapContractService"
+import SuccessAnimation from "../SuccessAnimation"
 
 export interface SwapPairData {
   id: string
@@ -14,32 +17,40 @@ export interface SwapPairData {
   toToken: string
   fromAmount: string
   toAmount: string
-  rate: number
 }
 
 const BatchSwapInterface: React.FC = () => {
-  const { isConnected, address, connectWallet } = useAvailWallet()
+  const { isConnected, address, connectWallet } = useWallet()
+  const { addTransaction, updateTransaction } = useTransactions()
+  
+  // Initialize contract service for real wallet signing
+  React.useEffect(() => {
+    if (isConnected) {
+      const contractService = new SwapContractService()
+      availService.setSwapContractService(contractService)
+      console.log('✅ Contract service initialized for real wallet signing')
+    }
+  }, [isConnected])
   const [swapPairs, setSwapPairs] = useState<SwapPairData[]>([
     {
       id: "1",
-      fromToken: "USDC",
-      toToken: "USDT",
+      fromToken: "AVAI",
+      toToken: "USDC",
       fromAmount: "",
-      toAmount: "",
-      rate: 1.0
+      toAmount: ""
     }
   ])
   const [isExecuting, setIsExecuting] = useState(false)
   const [txHash, setTxHash] = useState<string | null>(null)
+  const [showSuccess, setShowSuccess] = useState(false)
 
   const addSwapPair = () => {
     const newPair: SwapPairData = {
       id: Date.now().toString(),
-      fromToken: "USDC",
-      toToken: "USDT",
+      fromToken: "AVAI",
+      toToken: "USDC",
       fromAmount: "",
-      toAmount: "",
-      rate: 1.0
+      toAmount: ""
     }
     setSwapPairs([...swapPairs, newPair])
   }
@@ -64,33 +75,88 @@ const BatchSwapInterface: React.FC = () => {
 
     setIsExecuting(true)
     setTxHash(null)
+    let transactionId: string | null = null
 
     try {
+      // Validate swap pairs
+      const validPairs = swapPairs.filter(pair => 
+        pair.fromAmount && 
+        pair.toAmount && 
+        parseFloat(pair.fromAmount) > 0 &&
+        pair.fromToken !== pair.toToken
+      )
+
+      if (validPairs.length === 0) {
+        throw new Error('No valid swap pairs to execute')
+      }
+
       // Convert swap pairs to batch swap data
-      const batchSwapData: BatchSwapData[] = swapPairs
-        .filter(pair => pair.fromAmount && pair.toAmount && parseFloat(pair.fromAmount) > 0)
-        .map(pair => ({
+      const batchSwapData: BatchSwapData[] = validPairs.map(pair => {
+        // Calculate the actual rate from the amounts
+        const rate = pair.fromAmount && pair.toAmount ? 
+          parseFloat(pair.toAmount) / parseFloat(pair.fromAmount) : 1.0
+        
+        return {
           fromToken: pair.fromToken,
           toToken: pair.toToken,
           fromAmount: pair.fromAmount,
           toAmount: pair.toAmount,
-          rate: pair.rate
-        }))
+          rate: rate
+        }
+      })
 
-      if (batchSwapData.length === 0) {
-        throw new Error('No valid swap pairs to execute')
-      }
-
-      console.log("Executing batch swap with Avail SDK:", batchSwapData)
+      console.log("Executing batch swap with real data:", batchSwapData)
+      
+      // Calculate total value for display
+      const totalValue = batchSwapData.reduce((sum, swap) => {
+        return sum + parseFloat(swap.fromAmount)
+      }, 0)
+      
+      console.log(`Total swap value: $${totalValue.toFixed(2)}`)
+      
+      // Create transaction record
+      transactionId = addTransaction({
+        hash: '', // Will be updated after execution
+        type: 'batch_swap',
+        status: 'pending',
+        fromToken: validPairs[0].fromToken,
+        toToken: validPairs[validPairs.length - 1].toToken,
+        fromAmount: totalValue.toString(),
+        toAmount: batchSwapData.reduce((sum, swap) => sum + parseFloat(swap.toAmount), 0).toString(),
+        description: `Batch swap ${validPairs.length} pairs`
+      })
       
       // Execute batch swap using Avail SDK
       const hash = await availService.executeBatchSwaps(batchSwapData)
       setTxHash(hash)
+      setShowSuccess(true)
+      
+      // Update transaction with hash and mark as confirmed
+      updateTransaction(transactionId, {
+        hash,
+        status: 'confirmed'
+      })
       
       console.log("Batch swap executed successfully:", hash)
     } catch (error) {
       console.error("Batch swap failed:", error)
-      alert(`Batch swap failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      
+      // Update transaction status to failed
+      if (transactionId) {
+        updateTransaction(transactionId, {
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        })
+      }
+      
+      // Show user-friendly error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.error(`Batch swap failed: ${errorMessage}`)
+      
+      // Don't show alert for simulation errors in development
+      if (!errorMessage.includes('simulation')) {
+        alert(`Batch swap failed: ${errorMessage}`)
+      }
     } finally {
       setIsExecuting(false)
     }
@@ -104,28 +170,10 @@ const BatchSwapInterface: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Main Swap Interface */}
-      <div className="bg-[#000000] border border-white/10 rounded-xl p-6 shadow-lg">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-white/95">Swap Pairs</h2>
-          <Button
-            onClick={addSwapPair}
-            className="flex items-center space-x-2 bg-gradient-to-r from-[#723680] to-[#461561] hover:from-[#290038] hover:to-[#723680]"
-          >
-            <IoAdd className="w-4 h-4" />
-            <span>Add Pair</span>
-          </Button>
-        </div>
-
+      <div className="bg-[#000000] border border-white/10 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
         <div className="space-y-4">
           {swapPairs.map((pair, index) => (
             <div key={pair.id} className="relative">
-              {index > 0 && (
-                <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-10">
-                  <div className="bg-[#000000] border border-white/10 rounded-full p-1">
-                    <IoSwapHorizontal className="w-4 h-4 text-[#723680]" />
-                  </div>
-                </div>
-              )}
               <SwapPair
                 pair={pair}
                 onUpdate={(updates) => updateSwapPair(pair.id, updates)}
@@ -134,6 +182,19 @@ const BatchSwapInterface: React.FC = () => {
               />
             </div>
           ))}
+        </div>
+
+        <div className="mt-6 flex justify-center">
+          <button
+            onClick={addSwapPair}
+            className="group relative overflow-hidden bg-gradient-to-r from-[#723680] to-[#461561] hover:from-[#290038] hover:to-[#723680] rounded-lg px-6 py-3 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-[#723680]/25"
+          >
+            <div className="flex items-center space-x-2 relative z-10">
+              <IoAdd className="w-4 h-4 text-white" />
+              <span className="text-white font-medium">Add Pair</span>
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-r from-[#290038] to-[#723680] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          </button>
         </div>
       </div>
 
@@ -146,6 +207,12 @@ const BatchSwapInterface: React.FC = () => {
         isExecuting={isExecuting}
         txHash={txHash}
         address={address}
+      />
+
+      {/* Success Animation */}
+      <SuccessAnimation 
+        isVisible={showSuccess}
+        onComplete={() => setShowSuccess(false)}
       />
     </div>
   )

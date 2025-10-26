@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Lato } from "next/font/google";
 import "./globals.css";
+import { WalletProvider } from "../contexts/WalletContext";
+import { TransactionProvider } from "../contexts/TransactionContext";
 
 const lato = Lato({
   variable: "--font-lato",
@@ -23,7 +25,11 @@ export default function RootLayout({
       <body
         className={`${lato.variable} antialiased`}
       >
-        {children}
+        <WalletProvider>
+          <TransactionProvider>
+            {children}
+          </TransactionProvider>
+        </WalletProvider>
       </body>
     </html>
   );

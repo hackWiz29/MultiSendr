@@ -1,0 +1,37 @@
+{
+  "name": "stablecoin-swap-contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts for stablecoin swap platform",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:mumbai": "hardhat run scripts/deploy.ts --network mumbai",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
+    "deploy:avail": "hardhat run scripts/deploy.ts --network availTestnet",
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "verify:mumbai": "hardhat verify --network mumbai",
+    "verify:sepolia": "hardhat verify --network sepolia",
+    "node": "hardhat node",
+    "clean": "hardhat clean"
+  },
+  "keywords": [
+    "stablecoin",
+    "swap",
+    "defi",
+    "ethereum",
+    "avail",
+    "smart-contracts"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@openzeppelin/contracts": "^4.9.3",
+    "hardhat": "^2.17.2",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "ethers": "^5.7.2"
+  }
+}

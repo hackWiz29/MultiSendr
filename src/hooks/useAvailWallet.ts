@@ -1,6 +1,31 @@
 import { useState, useEffect } from 'react'
-import { createWalletClient, custom } from 'viem'
 import { availService } from '../services/availService'
+
+// Note: Avail is a Substrate-based blockchain, not EVM-compatible
+// This uses Polkadot.js extension for wallet integration
+
+// Dynamic imports to avoid SSR issues
+let web3Accounts: any = null
+let web3Enable: any = null
+let web3FromAddress: any = null
+let stringToHex: any = null
+
+// Initialize Polkadot.js functions only in browser
+const initializePolkadot = async () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const extensionDapp = await import('@polkadot/extension-dapp')
+      const util = await import('@polkadot/util')
+      
+      web3Accounts = extensionDapp.web3Accounts
+      web3Enable = extensionDapp.web3Enable
+      web3FromAddress = extensionDapp.web3FromAddress
+      stringToHex = util.stringToHex
+    } catch (error) {
+      console.warn('Failed to load Polkadot.js extensions:', error)
+    }
+  }
+}
 
 export interface WalletState {
   isConnected: boolean
@@ -23,30 +48,50 @@ export const useAvailWallet = () => {
     setWalletState(prev => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      // Check if wallet is available
-      if (typeof window === 'undefined' || !window.ethereum) {
-        throw new Error('No wallet found. Please install MetaMask or another Web3 wallet.')
+      // Check if we're in browser environment
+      if (typeof window === 'undefined') {
+        throw new Error('Wallet connection requires browser environment')
       }
 
-      // Request account access
-      const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts'
-      })
+      // Initialize Polkadot.js functions
+      await initializePolkadot()
 
-      if (!accounts || accounts.length === 0) {
-        throw new Error('No accounts found')
+      if (!web3Enable || !web3Accounts || !web3FromAddress) {
+        throw new Error('Polkadot.js extensions not available. Please refresh the page.')
       }
 
-      const address = accounts[0]
+      // Enable Polkadot.js extension
+      const extensions = await web3Enable('Avail StableCoin Swap')
       
-      // Create wallet client
-      const walletClient = createWalletClient({
-        account: address as `0x${string}`,
-        transport: custom(window.ethereum)
-      })
+      if (extensions.length === 0) {
+        throw new Error('No Polkadot.js compatible wallet found. Please install Talisman, SubWallet, or Polkadot.js extension.')
+      }
+
+      // Get all accounts from all extensions
+      const allAccounts = await web3Accounts()
+      
+      if (allAccounts.length === 0) {
+        throw new Error('No accounts found. Please create an account in your Polkadot.js compatible wallet.')
+      }
+
+      // Use the first account
+      const account = allAccounts[0]
+      const address = account.address
+
+      // Validate Avail address format (should start with '5')
+      if (!address.startsWith('5')) {
+        throw new Error('Invalid Avail address format. Please ensure you\'re using an Avail-compatible account.')
+      }
+
+      // Get the injector for signing transactions
+      const injector = await web3FromAddress(address)
 
       // Set wallet client in Avail service
-      await availService.setWalletClient(walletClient)
+      await availService.setWalletClient({
+        address,
+        injector,
+        signer: injector.signer
+      })
 
       // Get balance
       const balance = await availService.getBalance(address)
@@ -59,7 +104,7 @@ export const useAvailWallet = () => {
         error: null
       })
 
-      console.log('Wallet connected successfully:', address)
+      console.log('Substrate wallet connected successfully to Avail:', address)
 
     } catch (error) {
       console.error('Wallet connection failed:', error)
@@ -96,30 +141,46 @@ export const useAvailWallet = () => {
   // Auto-connect wallet if previously connected
   useEffect(() => {
     const checkConnection = async () => {
-      if (typeof window === 'undefined' || !window.ethereum) return
+      if (typeof window === 'undefined') return
 
       try {
-        const accounts = await window.ethereum.request({
-          method: 'eth_accounts'
-        })
+        // Initialize Polkadot.js functions
+        await initializePolkadot()
 
-        if (accounts && accounts.length > 0) {
-          const address = accounts[0]
-          const walletClient = createWalletClient({
-            account: address as `0x${string}`,
-            transport: custom(window.ethereum)
-          })
+        if (!web3Enable || !web3Accounts || !web3FromAddress) {
+          return
+        }
 
-          await availService.setWalletClient(walletClient)
-          const balance = await availService.getBalance(address)
+        // Check if extensions are available
+        const extensions = await web3Enable('Avail StableCoin Swap')
+        
+        if (extensions.length > 0) {
+          const allAccounts = await web3Accounts()
+          
+          if (allAccounts.length > 0) {
+            const account = allAccounts[0]
+            const address = account.address
 
-          setWalletState({
-            isConnected: true,
-            address,
-            balance,
-            isLoading: false,
-            error: null
-          })
+            if (address.startsWith('5')) {
+              const injector = await web3FromAddress(address)
+              
+              await availService.setWalletClient({
+                address,
+                injector,
+                signer: injector.signer
+              })
+              
+              const balance = await availService.getBalance(address)
+
+              setWalletState({
+                isConnected: true,
+                address,
+                balance,
+                isLoading: false,
+                error: null
+              })
+            }
+          }
         }
       } catch (error) {
         console.error('Auto-connection failed:', error)
@@ -131,29 +192,19 @@ export const useAvailWallet = () => {
 
   // Listen for account changes
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.ethereum) return
+    if (typeof window === 'undefined') return
 
-    const handleAccountsChanged = (accounts: string[]) => {
-      if (accounts.length === 0) {
-        disconnectWallet()
-      } else if (accounts[0] !== walletState.address) {
-        connectWallet()
-      }
-    }
-
-    const handleChainChanged = () => {
-      // Refresh wallet state when chain changes
+    // For Substrate wallets, we need to listen to extension events
+    const handleAccountsChanged = () => {
       if (walletState.isConnected) {
         connectWallet()
       }
     }
 
-    window.ethereum.on('accountsChanged', handleAccountsChanged)
-    window.ethereum.on('chainChanged', handleChainChanged)
-
-    return () => {
-      window.ethereum.removeListener('accountsChanged', handleAccountsChanged)
-      window.ethereum.removeListener('chainChanged', handleChainChanged)
+    // Note: Substrate wallet events are handled differently
+    // This is a simplified approach - in production you'd want more robust event handling
+    if (walletState.isConnected && walletState.address) {
+      console.log('Substrate wallet connected successfully to Avail:', walletState.address)
     }
   }, [walletState.address, walletState.isConnected])
 
